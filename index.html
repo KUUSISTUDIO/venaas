@@ -142,6 +142,113 @@
     background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;
     opacity:0;pointer-events:none;transition:.2s;max-width:90vw;text-align:center}
   .toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+
+  /* =========================================================
+     3D-ULKOASU (v1.2)
+     ========================================================= */
+  :root{
+    --key-top:#2c3027; --key-bot:#1b1e18; --key-edge:#080907; --key-hi:rgba(255,255,255,.08);
+    --or-hi:#ffb27c; --or-1:#ff7b2f; --or-2:#f05d10; --or-3:#b5420a; --or-base:#6e2604;
+    --rd-hi:#ff8f87; --rd-1:#ff4a3d; --rd-2:#e02a20; --rd-3:#9d1810; --rd-base:#5c0a05;
+  }
+
+  /* --- Iso painonappi: metallikehys + paksu, kiiltävä nappi --- */
+  .ptt-wrap::before{content:"";position:absolute;inset:-16px;border-radius:50%;
+    background:radial-gradient(circle at 50% 18%,#3b3f36 0%,#23261f 45%,#121410 100%);
+    box-shadow:0 26px 50px rgba(0,0,0,.75),0 6px 14px rgba(0,0,0,.6),
+      inset 0 2px 1px rgba(255,255,255,.12),inset 0 -4px 10px rgba(0,0,0,.7)}
+  .ptt-wrap::after{content:"";position:absolute;inset:-4px;border-radius:50%;pointer-events:none;
+    box-shadow:inset 0 6px 14px rgba(0,0,0,.85),inset 0 -1px 1px rgba(255,255,255,.06)}
+  .ptt{inset:4px;z-index:1;
+    background:radial-gradient(circle at 50% 28%,var(--or-hi) 0%,var(--or-1) 30%,var(--or-2) 62%,var(--or-3) 100%);
+    box-shadow:0 12px 0 var(--or-base),0 14px 2px rgba(0,0,0,.45),0 22px 30px rgba(0,0,0,.55),
+      inset 0 3px 6px rgba(255,255,255,.45),inset 0 -14px 26px rgba(80,20,0,.45);
+    transform:translateY(-8px);transition:transform .07s ease, box-shadow .07s ease, background .2s}
+  .ptt::before{content:"";position:absolute;top:5%;left:17%;right:17%;height:40%;border-radius:50%;pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.08) 70%,rgba(255,255,255,0) 100%)}
+  .ptt svg,.ptt b{position:relative;filter:drop-shadow(0 1px 0 rgba(255,220,190,.45))}
+  .ptt:active,.ptt.live{transform:translateY(2px);
+    box-shadow:0 2px 0 var(--or-base),0 3px 2px rgba(0,0,0,.5),0 6px 10px rgba(0,0,0,.45),
+      inset 0 3px 6px rgba(255,255,255,.3),inset 0 -8px 20px rgba(80,20,0,.5)}
+  .ptt.live{background:radial-gradient(circle at 50% 28%,var(--rd-hi) 0%,var(--rd-1) 30%,var(--rd-2) 62%,var(--rd-3) 100%);
+    box-shadow:0 2px 0 var(--rd-base),0 3px 2px rgba(0,0,0,.5),0 6px 10px rgba(0,0,0,.45),
+      inset 0 3px 6px rgba(255,255,255,.3),inset 0 -8px 20px rgba(70,0,0,.5)}
+  .ptt.live svg,.ptt.live b{filter:drop-shadow(0 1px 0 rgba(255,200,195,.45))}
+  .ring{inset:-22px;z-index:0}
+
+  /* --- Upotetut kentät --- */
+  .live-text,.search input,.typed textarea,.note textarea,.note input.title-in{
+    background:linear-gradient(180deg,#0f100d,#171914);border:1px solid #23271f;border-bottom-color:#2f3429;
+    box-shadow:inset 0 3px 8px rgba(0,0,0,.65),inset 0 1px 0 rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.04)}
+
+  /* --- Näppäinpainikkeet --- */
+  .btn,.seg button,.share-row a{
+    background:linear-gradient(180deg,var(--key-top),var(--key-bot));
+    border:1px solid #33382d;border-bottom-color:var(--key-edge);border-radius:11px;
+    box-shadow:0 3px 0 var(--key-edge),0 5px 8px rgba(0,0,0,.4),inset 0 1px 0 var(--key-hi);
+    transform:translateY(-1px);transition:transform .06s, box-shadow .06s}
+  .btn:hover{background:linear-gradient(180deg,#323729,#1f221b)}
+  .btn:active,.seg button:active,.share-row a:active{transform:translateY(2px);
+    box-shadow:0 0 0 var(--key-edge),0 1px 2px rgba(0,0,0,.4),inset 0 1px 0 var(--key-hi)}
+  .acts{gap:8px;padding-top:12px;padding-bottom:4px}
+  .btn.primary{color:#2a0f02;border-color:#ff9a5a;border-bottom-color:var(--or-base);
+    background:linear-gradient(180deg,#ff9654,var(--or-2));
+    box-shadow:0 3px 0 var(--or-base),0 5px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.35)}
+  .btn.primary:active{box-shadow:0 0 0 var(--or-base),inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn.danger.armed{color:#fff;border-color:#c0392b;border-bottom-color:var(--rd-base);
+    background:linear-gradient(180deg,#d6372c,#8f140c);
+    box-shadow:0 3px 0 var(--rd-base),0 5px 8px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.25)}
+  .typed .btn.primary{padding:14px;font-size:16px}
+
+  /* Välilehtivalitsin: valittu painuu sisään */
+  .seg{gap:8px;margin-bottom:14px}
+  .seg button.on{color:var(--accent);border-color:#1a1d16;transform:translateY(2px);
+    background:linear-gradient(180deg,#141612,#1b1e18);
+    box-shadow:inset 0 3px 7px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.05)}
+
+  /* --- Muistiinpanokortit kohollaan --- */
+  .note{background:linear-gradient(180deg,#1c1f18,#151712);border:1px solid #2a2e25;border-bottom-color:#0c0d0b;
+    box-shadow:0 8px 18px rgba(0,0,0,.45),0 2px 0 #0c0d0b,inset 0 1px 0 rgba(255,255,255,.06);margin-bottom:14px}
+  .acts{border-top:1px solid #0e100c;box-shadow:0 -1px 0 rgba(255,255,255,.04)}
+
+  /* Rasti: kohollaan oleva näppäin, joka painuu vihreäksi */
+  .chk{border:1px solid #3a3f33;border-bottom-color:var(--key-edge);
+    background:linear-gradient(180deg,#30352a,#1b1e18);
+    box-shadow:0 3px 0 var(--key-edge),0 4px 6px rgba(0,0,0,.4),inset 0 1px 0 var(--key-hi)}
+  .chk.on{border-color:#9be38a;border-bottom-color:#2f6b24;transform:translateY(2px);
+    background:linear-gradient(180deg,#9be38a,#4fae3d);
+    box-shadow:0 1px 0 #2f6b24,inset 0 1px 0 rgba(255,255,255,.4),inset 0 -3px 6px rgba(0,0,0,.2)}
+
+  /* Kytkin */
+  .switch{background:#151712;box-shadow:inset 0 3px 7px rgba(0,0,0,.75),0 1px 0 rgba(255,255,255,.05)}
+  .switch.on{background:linear-gradient(180deg,#3f8f31,#5cc449);box-shadow:inset 0 3px 7px rgba(0,0,0,.45),0 1px 0 rgba(255,255,255,.05)}
+  .switch::after{background:linear-gradient(180deg,#ffffff,#d9d9d4);box-shadow:0 3px 5px rgba(0,0,0,.5),0 1px 0 #9a9a94}
+  .set-card{background:linear-gradient(180deg,#1c1f18,#151712);border-bottom-color:#0c0d0b;
+    box-shadow:0 8px 18px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+
+  /* --- Alapalkki: näppäimet, valittu painuu sisään --- */
+  nav{gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,#171914,#0d0e0b);border-top:1px solid #262a22;
+    box-shadow:0 -6px 16px rgba(0,0,0,.45)}
+  nav button{border-radius:14px;padding:10px 0 9px;color:#a7aa9d;
+    background:linear-gradient(180deg,var(--key-top),var(--key-bot));
+    border:1px solid #33382d;border-bottom-color:var(--key-edge);
+    box-shadow:0 4px 0 var(--key-edge),0 6px 10px rgba(0,0,0,.45),inset 0 1px 0 var(--key-hi);
+    transform:translateY(-2px);transition:transform .06s, box-shadow .06s}
+  nav button:active{transform:translateY(2px);box-shadow:0 0 0 var(--key-edge),inset 0 1px 0 var(--key-hi)}
+  nav button.on{color:var(--accent);transform:translateY(2px);border-color:#121410;
+    background:linear-gradient(180deg,#121410,#1a1d17);
+    box-shadow:inset 0 4px 9px rgba(0,0,0,.75),0 1px 0 rgba(255,255,255,.05)}
+  nav button.on svg{filter:drop-shadow(0 0 6px rgba(255,106,31,.55))}
+  .count{background:#0e100c;box-shadow:inset 0 1px 3px rgba(0,0,0,.7)}
+  footer{padding:8px 0 4px}
+
+  .note > .acts,.note > .share-row{grid-column:1 / -1}
+  .acts{gap:7px}
+  .acts .btn{padding:8px 11px;font-size:13.5px}
+
+  /* Logo hieman kohokuvioksi */
+  .logo{text-shadow:0 2px 0 #000,0 3px 6px rgba(0,0,0,.6)}
 </style>
 </head>
 <body>
@@ -197,7 +304,7 @@
       Esimerkki: <em>"Kaupasta – lihapullia, nakkeja, maitoa"</em> → otsikko <em>Kaupasta</em>, muistiinpanoon <em>lihapullia, nakkeja, maitoa</em>.<br><br>
       Vinkki: jos haluat otsikoksi useamman sanan, pidä otsikon jälkeen pieni tauko. Litterointi lisää silloin yleensä pisteen, ja koko lause muuttuu otsikoksi. Muuten otsikoksi tulee ensimmäinen sana.</p>
     </div>
-    <div class="set-about">Venaas v1.1<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
+    <div class="set-about">Venaas v1.2<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
   </section>
 </main>
 
@@ -215,7 +322,7 @@
     Asetukset
   </button>
 </nav>
-<footer>Venaas v1.1 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v1.2 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
