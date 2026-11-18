@@ -91,6 +91,8 @@
   .chk.on svg{opacity:1}
   .note.done .body{color:var(--muted);text-decoration:line-through;text-decoration-color:#555}
   .toast button{background:none;border:0;color:var(--accent-d);font:inherit;font-weight:800;margin-left:10px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em}
+  .day{font-family:"Archivo Black",sans-serif;font-size:22px;letter-spacing:.01em;margin:18px 2px 10px;color:var(--text)}
+  .day:first-child{margin-top:4px}
   .note .meta{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
   .note .body{font-size:16.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
   .note textarea{width:100%;min-height:120px;background:var(--panel2);color:var(--text);border:1px solid var(--line);
@@ -178,7 +180,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas v0.9 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v1.0 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -204,6 +206,10 @@
   const wd = ['su','ma','ti','ke','to','pe','la'];
   function fmt(ts){ const d=new Date(ts), p=n=>String(n).padStart(2,'0');
     return `${wd[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()} klo ${p(d.getHours())}.${p(d.getMinutes())}`; }
+  const KK = ['tammikuuta','helmikuuta','maaliskuuta','huhtikuuta','toukokuuta','kesäkuuta','heinäkuuta','elokuuta','syyskuuta','lokakuuta','marraskuuta','joulukuuta'];
+  const dayKey = ts => { const d=new Date(ts); return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); };
+  const dayTitle = ts => { const d=new Date(ts); return d.getDate()+'. '+KK[d.getMonth()]+' '+d.getFullYear(); };
+  const timeOf = ts => { const d=new Date(ts), p=n=>String(n).padStart(2,'0'); return 'klo '+p(d.getHours())+'.'+p(d.getMinutes()); };
   function cleanText(t){ t = t.replace(/\s+/g,' ').trim(); return t ? t.charAt(0).toUpperCase()+t.slice(1) : t; }
   const newId = () => 'n'+Date.now()+Math.random().toString(36).slice(2,6);
 
@@ -561,7 +567,7 @@
   const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
   function render(){
-    const open = notes.filter(n=>!n.done), done = notes.filter(n=>n.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+    const open = notes.filter(n=>!n.done).sort((a,b)=>b.ts-a.ts), done = notes.filter(n=>n.done).sort((a,b)=>b.ts-a.ts);
     el.count.textContent = open.length; el.cOpen.textContent = open.length; el.cDone.textContent = done.length;
     const q = el.q.value.trim().toLowerCase();
     let list = tab==='open' ? open : done;
@@ -572,7 +578,14 @@
       e.textContent = q ? 'Ei osumia.' : tab==='open' ? 'Ei avoimia muistiinpanoja. Paina isoa nappia ja puhu.' : 'Arkisto on tyhjä. Rastita muistiinpano, kun asia on hoidettu.';
       el.notes.append(e); return;
     }
+    let lastDay = null;
     for(const n of list){
+      const k = dayKey(n.ts);
+      if(k !== lastDay){
+        lastDay = k;
+        const h = document.createElement('h2'); h.className='day'; h.textContent = dayTitle(n.ts);
+        el.notes.append(h);
+      }
       const card = document.createElement('article'); card.className='note'+(n.done?' done':'');
       const chk = document.createElement('button'); chk.className='chk'+(n.done?' on':'');
       chk.setAttribute('aria-label', n.done ? 'Palauta avoimeksi' : 'Merkitse tehdyksi');
@@ -584,7 +597,7 @@
         } else { setDone(n.id, false); toast('Palautettu avoimiin'); }
       });
       const meta = document.createElement('div'); meta.className='meta';
-      meta.textContent = fmt(n.ts) + (n.done && n.doneAt ? ' · tehty ' + fmt(n.doneAt).replace(/^\S+ /,'') : '');
+      meta.textContent = timeOf(n.ts) + (n.done && n.doneAt ? ' · tehty ' + (dayKey(n.doneAt)===dayKey(n.ts) ? timeOf(n.doneAt) : dayTitle(n.doneAt)+' '+timeOf(n.doneAt)) : '');
       card.append(chk, meta);
 
       if(editing===n.id){
