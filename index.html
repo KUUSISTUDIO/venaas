@@ -176,7 +176,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas v0.7 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v0.8 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -464,7 +464,13 @@
     buffer=''; showLive();
     const errText = {missing_api_key:'litterointipalvelun avain puuttuu', rate_limited:'liian monta sanelua – odota hetki', forbidden:'pääsy estetty', openai_error:'litterointipalvelu ei vastannut', too_large:'liian pitkä äänite'}[lastErr] || lastErr;
     const msg = text ? 'Muistiinpano tallennettu' : (lastErr ? 'Ei tekstiä (' + errText + ')' : 'Puhetta ei tunnistettu');
-    if(text) addNote(text);
+    if(text){
+      addNote(text);
+      // Näytetään litteroitu teksti etusivulla seuraavaan saneluun asti
+      el.live.innerHTML = '';
+      const ok = document.createElement('i'); ok.textContent = '✓ Tallennettu muistiinpanoksi\n';
+      el.live.append(ok, text);
+    }
     // iPhonen Safari tunnistaa puhetta vain kerran sivun latausta kohden → ladataan sivu uudelleen
     if(IS_IOS && engine && engine.kind==='web'){
       try{ sessionStorage.setItem('venaas.toast', msg); }catch(e){}
