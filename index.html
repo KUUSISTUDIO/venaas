@@ -176,7 +176,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas v0.4 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v0.5 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -255,55 +255,75 @@
   }
 
   // B) Selaimen oma tunnistus (iPhonen Safari, Chrome) – kieli lukittu suomeksi.
-  //    Yksi ja sama tunnistin koko ajan: iOS ei toimi luotettavasti, jos tunnistin luodaan joka kerta uudelleen.
+  //    Jokainen painallus = uusi tunnistin, joka käynnistetään suoraan kosketuksesta.
+  //    Edellinen suljetaan, ja sen myöhästyneet tapahtumat ohitetaan (sukupolvilaskuri).
+  const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
   function makeWebEngine(SR){
-    const rec = new SR();
-    rec.lang = LANG; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
-    let running = false, want = false, endResolve = null, sessFinal = '', sessInterim = '', restarts = 0;
+    let rec = null, gen = 0, want = false, endResolve = null, sessFinal = '', sessInterim = '', restarts = 0;
     function commitSession(){
       const t = (sessFinal + ' ' + sessInterim).trim();
       if(t) buffer += ' ' + t;
       sessFinal = ''; sessInterim = ''; partial = '';
     }
-    rec.onstart = () => { running = true; diag('käynnissä'); setUi('live'); };
-    rec.onaudiostart = () => diag('mikki auki');
-    rec.onspeechstart = () => diag('puhetta');
-    rec.onresult = e => {
-      let f = '', i = '';
-      for(let k=0;k<e.results.length;k++){
-        const r = e.results[k];
-        if(r.isFinal) f += ' ' + r[0].transcript; else i += ' ' + r[0].transcript;
-      }
-      sessFinal = f.trim(); sessInterim = i.trim();
-      partial = (sessFinal + ' ' + sessInterim).trim();
-      showLive(); diag('tulos');
-    };
-    rec.onnomatch = () => diag('ei osumaa');
-    rec.onerror = e => {
-      lastErr = e.error; diag('virhe: ' + e.error);
-      if(e.error==='not-allowed' || e.error==='service-not-allowed'){ want=false; failed('not_granted'); }
-    };
-    rec.onend = () => {
-      running = false; diag('päättyi');
-      commitSession(); showLive();
-      if(want && restarts < 20){ restarts++; try{ rec.start(); diag('jatkuu'); return; }catch(err){ diag('jatko ei onnistu'); } }
-      const r = endResolve; endResolve = null; r && r();
-    };
+    function bind(r, g){
+      const cur = () => g === gen;
+      r.onstart = () => { if(!cur()) return; diag('käynnissä'); setUi('live'); };
+      r.onaudiostart = () => { if(cur()) diag('mikki auki'); };
+      r.onspeechstart = () => { if(cur()) diag('puhetta'); };
+      r.onresult = e => {
+        if(!cur()) return;
+        let f = '', i = '';
+        for(let k=0;k<e.results.length;k++){
+          const x = e.results[k];
+          if(x.isFinal) f += ' ' + x[0].transcript; else i += ' ' + x[0].transcript;
+        }
+        sessFinal = f.trim(); sessInterim = i.trim();
+        partial = (sessFinal + ' ' + sessInterim).trim();
+        showLive(); diag('tulos');
+      };
+      r.onerror = e => {
+        if(!cur()) return;
+        lastErr = e.error; diag('virhe: ' + e.error);
+        if(e.error==='not-allowed' || e.error==='service-not-allowed'){ want=false; failed('not_granted'); }
+      };
+      r.onend = () => {
+        if(!cur()) return;
+        diag('päättyi');
+        commitSession(); showLive();
+        if(want){
+          // Tietokoneen Chrome katkaisee tauon jälkeen – jatketaan. iPhonessa uudelleenkäynnistys
+          // ilman kosketusta ei tuota tekstiä, joten tallennetaan siihen asti puhuttu.
+          if(!IS_IOS && restarts < 20){ restarts++; try{ r.start(); diag('jatkuu'); return; }catch(err){} }
+          want = false; diag('katkesi');
+          if(listening) finish(true);
+        }
+        const res = endResolve; endResolve = null; res && res();
+      };
+    }
+    function create(){
+      const r = new SR();
+      r.lang = LANG; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
+      return r;
+    }
     return {
       start(){
+        // Suljetaan edellinen tunnistin ja ohitetaan sen myöhästyneet tapahtumat
+        const old = rec; gen++;
+        if(old){ try{ old.abort(); }catch(e){} }
         want = true; restarts = 0; lastErr = ''; sessFinal = ''; sessInterim = '';
-        if(running){ diag('oli jumissa → nollaus'); try{ rec.abort(); }catch(e){} running=false; }
+        rec = create(); bind(rec, gen);
         try{ rec.start(); diag('aloitus'); }
-        catch(e){ diag('aloitusvirhe: ' + e.name); if(e.name!=='InvalidStateError') failed('upstream_error'); }
+        catch(e){ diag('aloitusvirhe: ' + e.name); failed('upstream_error'); }
       },
       stop(){
         want = false;
+        const r = rec, g = gen;
         return new Promise(res => {
-          if(!running){ commitSession(); res(); return; }
+          if(!r){ commitSession(); res(); return; }
           endResolve = res;
-          try{ rec.stop(); diag('lopetus'); }catch(e){ endResolve=null; commitSession(); res(); return; }
+          try{ r.stop(); diag('lopetus'); }catch(e){ endResolve=null; commitSession(); res(); return; }
           // iOS palauttaa lopullisen tekstin vasta lopetuksen jälkeen – odotetaan enintään 5 s
-          setTimeout(()=>{ if(endResolve){ diag('aikakatkaisu'); try{ rec.abort(); }catch(e){} running=false; endResolve=null; commitSession(); res(); } }, 5000);
+          setTimeout(()=>{ if(endResolve && g===gen){ diag('aikakatkaisu'); gen++; try{ r.abort(); }catch(e){} endResolve=null; commitSession(); res(); } }, 5000);
         });
       }
     };
