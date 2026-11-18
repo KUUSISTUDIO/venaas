@@ -109,6 +109,20 @@
   .switch.on::after{transform:translateX(21px)}
   .set-about{color:var(--muted);font-size:13px;text-align:center;margin-top:24px;line-height:1.6}
   .set-about a{color:var(--muted)}
+  .lcount{font-size:13px;font-weight:700;color:var(--muted);margin-left:6px;letter-spacing:.04em}
+  .items{display:flex;flex-direction:column;margin-top:4px}
+  .item{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;border-bottom:1px solid #0e100c;
+    box-shadow:0 1px 0 rgba(255,255,255,.035);padding:10px 2px;color:var(--text);font:inherit;font-size:17px;text-align:left;cursor:pointer}
+  .item:last-child{border-bottom:0;box-shadow:none}
+  .ibox{flex:none;width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#1a0c03;
+    border:1px solid #3a3f33;border-bottom-color:#080907;background:linear-gradient(180deg,#30352a,#1b1e18);
+    box-shadow:0 2px 0 #080907,inset 0 1px 0 rgba(255,255,255,.08)}
+  .ibox svg{width:16px;height:16px;opacity:0}
+  .item.ok .ibox{background:linear-gradient(180deg,#9be38a,#4fae3d);border-color:#9be38a;border-bottom-color:#2f6b24;box-shadow:0 1px 0 #2f6b24;transform:translateY(1px)}
+  .item.ok .ibox svg{opacity:1}
+  .item.ok .ilbl{color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:#7a7d70}
+  .mode-badge{display:inline-block;margin-left:10px;padding:4px 10px;border-radius:20px;background:#1c2a16;color:#9be38a;
+    font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
   .note .meta{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
   .note .body{font-size:16.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
   .note textarea{width:100%;min-height:120px;background:var(--panel2);color:var(--text);border:1px solid var(--line);
@@ -260,7 +274,7 @@
 </head>
 <body>
 <header>
-  <div class="brand"><div class="logo">Ven<span>aa</span>s</div></div>
+  <div class="brand"><div class="logo">Ven<span>aa</span>s</div><span class="mode-badge" id="modeBadge" hidden>Kauppalista</span></div>
   <div class="engine" id="engine" hidden></div>
 </header>
 
@@ -310,7 +324,15 @@
       Esimerkki: <em>"Kaupasta – lihapullia, nakkeja, maitoa"</em> → otsikko <em>Kaupasta</em>, muistiinpanoon <em>lihapullia, nakkeja, maitoa</em>.<br><br>
       Vinkki: jos haluat otsikoksi useamman sanan, pidä otsikon jälkeen pieni tauko. Litterointi lisää silloin yleensä pisteen, ja koko lause muuttuu otsikoksi. Muuten otsikoksi tulee ensimmäinen sana.</p>
     </div>
-    <div class="set-about">Venaas v2.0<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
+    <div class="set-card" style="margin-top:14px">
+      <div class="set-row">
+        <b>Kauppalista-tila</b>
+        <button class="switch" id="swList" role="switch" aria-checked="false" aria-label="Kauppalista-tila"></button>
+      </div>
+      <p>Kun tila on päällä, sanele pelkät tuotteet, esimerkiksi <em>"maitoa, leipää, juustoa"</em>. Jokainen tuote menee omalle rivilleen samaan <em>Kauppalista</em>-muistiinpanoon, ja jokaisella rivillä on oma rasti, jolla tuotteen voi kuitata kärryyn.<br><br>
+      Uudet sanelut lisäävät tuotteita samaan listaan. Kun kauppareissu on tehty, arkistoi lista, jolloin seuraava sanelu aloittaa uuden listan.</p>
+    </div>
+    <div class="set-about">Venaas v2.1<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
   </section>
 </main>
 
@@ -328,7 +350,7 @@
     Asetukset
   </button>
 </nav>
-<footer>Venaas v2.0 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v2.1 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -374,9 +396,18 @@
   try{ settings = Object.assign(settings, JSON.parse(localStorage.getItem(SK)||'{}')); }catch(e){}
   function saveSettings(){ try{ localStorage.setItem(SK, JSON.stringify(settings)); }catch(e){} }
   const swTitle = document.getElementById('swTitle');
-  function drawSettings(){ swTitle.classList.toggle('on', settings.titleFromFirst); swTitle.setAttribute('aria-checked', String(settings.titleFromFirst)); }
+  let drawSettings = function(){ swTitle.classList.toggle('on', settings.titleFromFirst); swTitle.setAttribute('aria-checked', String(settings.titleFromFirst)); };
   swTitle.addEventListener('click', ()=>{ settings.titleFromFirst = !settings.titleFromFirst; saveSettings(); drawSettings();
     toast(settings.titleFromFirst ? 'Otsikko ensimmäisestä sanasta: päällä' : 'Otsikko ensimmäisestä sanasta: pois'); });
+  const swList = document.getElementById('swList');
+  const _draw = drawSettings;
+  drawSettings = function(){ _draw(); swList.classList.toggle('on', !!settings.listMode); swList.setAttribute('aria-checked', String(!!settings.listMode)); drawMode(); };
+  swList.addEventListener('click', ()=>{ settings.listMode = !settings.listMode; saveSettings(); drawSettings();
+    toast(settings.listMode ? 'Kauppalista-tila päällä' : 'Kauppalista-tila pois'); });
+  function drawMode(){
+    const b = document.getElementById('modeBadge'); if(b) b.hidden = !settings.listMode;
+    try{ if(!listening && !finishing) setUi('idle'); }catch(e){}
+  }
   drawSettings();
 
   const cap1 = t => t ? t.charAt(0).toUpperCase() + t.slice(1) : t;
@@ -388,12 +419,34 @@
     if(i > 0) return { title: cap1(t.slice(0,i).replace(/[,;.!?:]+$/,'')), text: cap1(t.slice(i).trim()) };
     return { title: cap1(t.replace(/[.!?]+$/,'')), text: '' };
   }
+  // Kauppalista: puhe pilkotaan tuotteiksi
+  function splitItems(t){
+    let parts = t.split(/\s*(?:[,;.!?\n]|\s+ja\s+|\s+sekä\s+)\s*/i).map(x=>x.trim()).filter(Boolean);
+    if(parts.length===1 && parts[0].split(/\s+/).length>2) parts = parts[0].split(/\s+/);
+    return parts.map(p => cap1(p.replace(/[.!?:]+$/,'').trim())).filter(Boolean);
+  }
+  function activeList(){ return notes.filter(n=>n.type==='list' && !n.done).sort((a,b)=>b.ts-a.ts)[0]; }
+  function addToList(text){
+    const items = splitItems(text);
+    if(!items.length) return 0;
+    let L = activeList();
+    if(!L){ L = {id:newId(), type:'list', title:'Kauppalista', items:[], text:'', ts:Date.now(), done:false}; notes.unshift(L); }
+    const have = new Set(L.items.map(i=>i.t.toLowerCase()));
+    let added = 0;
+    for(const it of items){ if(!have.has(it.toLowerCase())){ L.items.push({t:it, ok:false}); have.add(it.toLowerCase()); added++; } }
+    save(); render();
+    return added;
+  }
+  function toggleItem(id, idx){ const n=notes.find(x=>x.id===id); if(!n||!n.items[idx]) return; n.items[idx].ok=!n.items[idx].ok; save(); render(); }
   function addNote(text){
+    if(settings.listMode) return addToList(text);
     const n = {id:newId(), text, ts:Date.now(), done:false};
     if(settings.titleFromFirst){ const p = splitTitle(text); n.title = p.title; n.text = p.text; }
     notes.unshift(n); save(); render();
   }
-  const fullText = n => (n.title ? n.title + (n.text ? '\n' + n.text : '') : n.text);
+  const fullText = n => n.type==='list'
+    ? (n.title||'Kauppalista') + '\n' + n.items.map(i => (i.ok ? '✓ ' : '• ') + i.t).join('\n')
+    : (n.title ? n.title + (n.text ? '\n' + n.text : '') : n.text);
   function setDone(id, done){ const n=notes.find(x=>x.id===id); if(!n) return; n.done=done; n.doneAt=done?Date.now():null; save(); render(); }
   function setChecked(id, on){ const n=notes.find(x=>x.id===id); if(!n) return; n.checked=on; n.checkedAt=on?Date.now():null; save(); render(); }
   function updateNote(id, text, title){ const n=notes.find(x=>x.id===id); if(n){ n.text=text; if(title) n.title=title; else delete n.title; save(); render(); } }
@@ -627,7 +680,7 @@
     if(s==='live'){ el.status.textContent = mode==='toggle' ? '● Kuuntelee – napauta lopettaaksesi' : '● Kuuntelee'; el.label.textContent = mode==='toggle' ? 'Lopeta' : 'Puhu'; }
     else if(s==='starting'){ el.status.textContent = 'Avataan mikrofonia…'; el.label.textContent='Puhu'; }
     else if(s==='busy'){ el.status.textContent = 'Litteroidaan…'; el.label.textContent='Odota'; }
-    else { el.status.textContent = 'Pidä pohjassa ja puhu'; el.label.textContent='Paina'; }
+    else { el.status.textContent = settings.listMode ? 'Kauppalista · sano tuotteet' : 'Pidä pohjassa ja puhu'; el.label.textContent='Paina'; }
   }
 
   function begin(){
@@ -658,12 +711,18 @@
     buffer=''; showLive();
     const errText = {missing_api_key:'litterointipalvelun avain puuttuu', rate_limited:'liian monta sanelua – odota hetki', forbidden:'pääsy estetty', openai_error:'litterointipalvelu ei vastannut', too_large:'liian pitkä äänite'}[lastErr] || lastErr;
     const msg = text ? 'Muistiinpano tallennettu' : (lastErr ? 'Ei tekstiä (' + errText + ')' : 'Puhetta ei tunnistettu');
+    let shown = text, okText = '✓ Tallennettu muistiinpanoksi\n', toastMsg = msg;
+    if(text && settings.listMode){
+      const items = splitItems(text); const added = addToList(text);
+      shown = items.join('\n'); okText = '✓ Lisätty kauppalistaan\n';
+      toastMsg = added ? ('Kauppalistaan lisätty ' + added + (added===1 ? ' tuote' : ' tuotetta')) : 'Tuotteet olivat jo listalla';
+    }
     if(text){
-      addNote(text);
+      if(!settings.listMode) addNote(text);
       // Näytetään litteroitu teksti etusivulla seuraavaan saneluun asti
       el.live.innerHTML = '';
-      const ok = document.createElement('i'); ok.textContent = '✓ Tallennettu muistiinpanoksi\n';
-      el.live.append(ok, text);
+      const ok = document.createElement('i'); ok.textContent = okText;
+      el.live.append(ok, shown);
       clearTimeout(clearT); el.live.classList.remove('fade');
       clearT = setTimeout(clearLive, 8000);
     }
@@ -674,7 +733,7 @@
       setTimeout(()=>location.reload(), 250);
       return;
     }
-    toast(msg);
+    toast(toastMsg);
     finishing = false; mode = null; setUi('idle');
   }
 
@@ -720,7 +779,7 @@
     const text = cleanText(el.typedInput.value);
     if(!text){ toast('Kirjoita tai sanele ensin jotain'); return; }
     addNote(text); el.typedInput.value=''; el.typedInput.blur();
-    toast('Muistiinpano tallennettu');
+    toast(settings.listMode ? 'Lisätty kauppalistaan' : 'Muistiinpano tallennettu');
   });
 
   /* ================= Näkymät ================= */
@@ -775,14 +834,35 @@
 
       if(editing===n.id){
         const ti = document.createElement('input'); ti.className='title-in'; ti.placeholder='Otsikko (valinnainen)'; ti.value = n.title || '';
-        const ta = document.createElement('textarea'); ta.value = n.text; card.append(ti, ta);
+        const ta = document.createElement('textarea'); ta.value = n.type==='list' ? n.items.map(i=>i.t).join('\n') : n.text; card.append(ti, ta);
+        if(n.type==='list') ta.placeholder = 'Yksi tuote per rivi';
         const acts = document.createElement('div'); acts.className='acts';
-        acts.append(btn('Tallenna', ()=>{ const t=ta.value.trim(), tt=ti.value.trim(); editing=null; if(t || tt) updateNote(n.id,t,tt); else render(); }, 'primary'),
+        acts.append(btn('Tallenna', ()=>{ const t=ta.value.trim(), tt=ti.value.trim(); editing=null;
+          if(n.type==='list'){ const old = new Map(n.items.map(i=>[i.t.toLowerCase(), i.ok]));
+            n.items = t.split('\n').map(x=>x.trim()).filter(Boolean).map(x=>({t:x, ok: !!old.get(x.toLowerCase())}));
+            n.title = tt || 'Kauppalista'; save(); render(); return; }
+          if(t || tt) updateNote(n.id,t,tt); else render(); }, 'primary'),
                     btn('Peru', ()=>{ editing=null; render(); }));
         card.append(acts); el.notes.append(card); setTimeout(()=>ta.focus(),0); continue;
       }
       if(n.title){ const tt = document.createElement('div'); tt.className='title'; tt.textContent = n.title; card.append(tt); }
-      const body = document.createElement('div'); body.className='body'; body.textContent = n.text;
+      let body;
+      if(n.type==='list'){
+        const got = n.items.filter(i=>i.ok).length;
+        if(card.querySelector('.title')) card.querySelector('.title').insertAdjacentHTML('beforeend', ' <span class="lcount">'+got+'/'+n.items.length+'</span>');
+        body = document.createElement('div'); body.className='items';
+        const order = n.items.map((it,i)=>[it,i]).sort((a,b)=>(a[0].ok-b[0].ok) || (a[1]-b[1]));
+        for(const [it,i] of order){
+          const row = document.createElement('button'); row.className='item'+(it.ok?' ok':'');
+          const box = document.createElement('span'); box.className='ibox'; box.innerHTML = CHECK;
+          const lbl = document.createElement('span'); lbl.className='ilbl'; lbl.textContent = it.t;
+          row.append(box, lbl); row.addEventListener('click', ()=>toggleItem(n.id, i));
+          body.append(row);
+        }
+        if(!n.items.length){ body.textContent = 'Lista on tyhjä.'; }
+      } else {
+        body = document.createElement('div'); body.className='body'; body.textContent = n.text;
+      }
       const share = document.createElement('div'); share.className='share-row';
       const acts = document.createElement('div'); acts.className='acts';
       const del = btn('Poista', ()=>{
@@ -833,6 +913,7 @@
   }
 
   render();
+  setUi('idle');
   initEngine();
   try{ const t = sessionStorage.getItem('venaas.toast'); if(t){ sessionStorage.removeItem('venaas.toast'); setTimeout(()=>toast(t), 50); } }catch(e){}
 })();
