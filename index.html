@@ -176,7 +176,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas v0.5 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v0.6 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -306,6 +306,7 @@
       return r;
     }
     return {
+      kind: 'web',
       start(){
         // Suljetaan edellinen tunnistin ja ohitetaan sen myöhästyneet tapahtumat
         const old = rec; gen++;
@@ -377,8 +378,16 @@
     if(partial){ buffer += ' ' + partial; partial=''; }
     const text = cleanText(buffer);
     buffer=''; showLive();
-    if(text){ addNote(text); toast('Muistiinpano tallennettu'); }
-    else toast(lastErr ? 'Puhetta ei tunnistettu (' + lastErr + ')' : 'Puhetta ei tunnistettu');
+    const msg = text ? 'Muistiinpano tallennettu' : (lastErr ? 'Puhetta ei tunnistettu (' + lastErr + ')' : 'Puhetta ei tunnistettu');
+    if(text) addNote(text);
+    // iPhonen Safari tunnistaa puhetta vain kerran sivun latausta kohden → ladataan sivu uudelleen
+    if(IS_IOS && engine && engine.kind==='web'){
+      try{ sessionStorage.setItem('venaas.toast', msg); }catch(e){}
+      setUi('busy'); el.status.textContent = text ? 'Tallennettu ✓' : 'Valmistellaan…';
+      setTimeout(()=>location.reload(), 250);
+      return;
+    }
+    toast(msg);
     finishing = false; mode = null; setUi('idle');
   }
 
@@ -526,6 +535,7 @@
 
   render();
   initEngine();
+  try{ const t = sessionStorage.getItem('venaas.toast'); if(t){ sessionStorage.removeItem('venaas.toast'); setTimeout(()=>toast(t), 50); } }catch(e){}
 })();
 </script>
 </body>
