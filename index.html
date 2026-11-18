@@ -58,6 +58,7 @@
     font-size:17px;line-height:1.45;white-space:pre-wrap}
   .live-text:empty::before{content:attr(data-ph);color:var(--muted)}
   .live-text i{color:var(--muted);font-style:normal}
+  .diag{font-size:11px;color:#5d6056;text-align:center;max-width:420px;line-height:1.4;min-height:14px}
   .hint{font-size:13px;color:var(--muted);text-align:center;max-width:420px;line-height:1.45}
 
   /* Kirjoitustila (kun mikrofonia ei ole) */
@@ -152,6 +153,7 @@
     </div>
 
     <div class="hint" id="hint">Lyhyt napautus = sanelu jatkuu, kunnes napautat uudelleen. Tietokoneella myös välilyönti toimii painonappina.</div>
+    <div class="diag" id="diag"></div>
   </section>
 
   <!-- MUISTIINPANOT -->
@@ -174,7 +176,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v0.3 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -218,7 +220,9 @@
 
   /* ================= Puheentunnistus ================= */
   let engine = null;
-  let buffer = '', partial = '';
+  let buffer = '', partial = '', lastErr = '';
+  const diagLog = [];
+  function diag(m){ diagLog.push(m); if(diagLog.length>9) diagLog.shift(); const d=document.getElementById('diag'); if(d) d.textContent = 'Vianetsintä: ' + diagLog.join(' → '); }
 
   function showLive(){
     const b = buffer.trim(), p = partial.trim();
@@ -250,44 +254,58 @@
     };
   }
 
-  // B) Selaimen oma tunnistus (iPhonen Safari, Chrome) – kieli lukittu suomeksi
+  // B) Selaimen oma tunnistus (iPhonen Safari, Chrome) – kieli lukittu suomeksi.
+  //    Yksi ja sama tunnistin koko ajan: iOS ei toimi luotettavasti, jos tunnistin luodaan joka kerta uudelleen.
   function makeWebEngine(SR){
-    let rec = null, want = false, endResolve = null, sessFinal = '', sessInterim = '';
+    const rec = new SR();
+    rec.lang = LANG; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+    let running = false, want = false, endResolve = null, sessFinal = '', sessInterim = '', restarts = 0;
     function commitSession(){
       const t = (sessFinal + ' ' + sessInterim).trim();
       if(t) buffer += ' ' + t;
       sessFinal = ''; sessInterim = ''; partial = '';
     }
-    function create(){
-      rec = new SR();
-      rec.lang = LANG; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
-      rec.onstart = () => setUi('live');
-      rec.onresult = e => {
-        // Rakennetaan koko istunnon teksti joka kerta alusta – estää iOS:n tuplatulokset
-        let f = '', i = '';
-        for(let k=0;k<e.results.length;k++){
-          const r = e.results[k];
-          if(r.isFinal) f += ' ' + r[0].transcript; else i += ' ' + r[0].transcript;
-        }
-        sessFinal = f.trim(); sessInterim = i.trim();
-        partial = (sessFinal + ' ' + sessInterim).trim();
-        showLive();
-      };
-      rec.onerror = e => {
-        if(e.error==='not-allowed' || e.error==='service-not-allowed'){ want=false; failed('not_granted'); }
-      };
-      rec.onend = () => {
-        commitSession(); showLive();
-        if(want){ try{ create(); rec.start(); return; }catch(err){} }   // iOS katkaisee tauolla – jatketaan
-        const r = endResolve; endResolve = null; r && r();
-      };
-    }
+    rec.onstart = () => { running = true; diag('käynnissä'); setUi('live'); };
+    rec.onaudiostart = () => diag('mikki auki');
+    rec.onspeechstart = () => diag('puhetta');
+    rec.onresult = e => {
+      let f = '', i = '';
+      for(let k=0;k<e.results.length;k++){
+        const r = e.results[k];
+        if(r.isFinal) f += ' ' + r[0].transcript; else i += ' ' + r[0].transcript;
+      }
+      sessFinal = f.trim(); sessInterim = i.trim();
+      partial = (sessFinal + ' ' + sessInterim).trim();
+      showLive(); diag('tulos');
+    };
+    rec.onnomatch = () => diag('ei osumaa');
+    rec.onerror = e => {
+      lastErr = e.error; diag('virhe: ' + e.error);
+      if(e.error==='not-allowed' || e.error==='service-not-allowed'){ want=false; failed('not_granted'); }
+    };
+    rec.onend = () => {
+      running = false; diag('päättyi');
+      commitSession(); showLive();
+      if(want && restarts < 20){ restarts++; try{ rec.start(); diag('jatkuu'); return; }catch(err){ diag('jatko ei onnistu'); } }
+      const r = endResolve; endResolve = null; r && r();
+    };
     return {
-      start(){ want = true; buffer=''; create(); try{ rec.start(); }catch(e){ failed('upstream_error'); } },
-      stop(){ want = false; return new Promise(res => {
-        endResolve = res; try{ rec.stop(); }catch(e){ endResolve=null; commitSession(); res(); }
-        setTimeout(()=>{ if(endResolve){ endResolve=null; commitSession(); res(); } }, 2500);
-      }); }
+      start(){
+        want = true; restarts = 0; lastErr = ''; sessFinal = ''; sessInterim = '';
+        if(running){ diag('oli jo käynnissä'); setUi('live'); return; }
+        try{ rec.start(); diag('aloitus'); }
+        catch(e){ diag('aloitusvirhe: ' + e.name); if(e.name!=='InvalidStateError') failed('upstream_error'); }
+      },
+      stop(){
+        want = false;
+        return new Promise(res => {
+          if(!running){ commitSession(); res(); return; }
+          endResolve = res;
+          try{ rec.stop(); diag('lopetus'); }catch(e){ endResolve=null; commitSession(); res(); return; }
+          // iOS palauttaa lopullisen tekstin vasta lopetuksen jälkeen – odotetaan enintään 5 s
+          setTimeout(()=>{ if(endResolve){ diag('aikakatkaisu'); try{ rec.abort(); }catch(e){} endResolve=null; commitSession(); res(); } }, 5000);
+        });
+      }
     };
   }
 
@@ -326,7 +344,7 @@
 
   function begin(){
     if(!engine || finishing) return;
-    buffer=''; partial=''; showLive();
+    buffer=''; partial=''; showLive(); diagLog.length = 0;
     listening = true; pressAt = Date.now(); mode = 'hold';
     setUi('starting');
     engine.start();             // kutsuttava suoraan kosketuksesta
@@ -340,7 +358,7 @@
     const text = cleanText(buffer);
     buffer=''; showLive();
     if(text){ addNote(text); toast('Muistiinpano tallennettu'); }
-    else toast('Puhetta ei tunnistettu');
+    else toast(lastErr ? 'Puhetta ei tunnistettu (' + lastErr + ')' : 'Puhetta ei tunnistettu');
     finishing = false; mode = null; setUi('idle');
   }
 
