@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0e0c">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-title" content="Venaas">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Venaas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=Archivo+Black&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0e0c; --panel:#171914; --panel2:#1f221b; --line:#2c3026;
+    --text:#ecebe4; --muted:#8f9285; --accent:#ff6a1f; --accent-d:#c94c0c;
+    --live:#ff3b30; --ok:#7fd16b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:"Archivo",system-ui,-apple-system,sans-serif}
+  body{display:flex;flex-direction:column;min-height:100dvh;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+  header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px}
+  .logo{font-family:"Archivo Black",sans-serif;font-size:22px;letter-spacing:.06em;text-transform:uppercase}
+  .logo span{color:var(--accent)}
+  .engine{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:right}
+  main{flex:1;display:flex;flex-direction:column;min-height:0}
+  .view{display:none;flex:1;flex-direction:column;min-height:0}
+  .view.on{display:flex}
+
+  /* ---------- Sanelu ---------- */
+  #rec{align-items:center;justify-content:center;padding:12px 20px 20px;gap:22px}
+  .status{font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);min-height:20px;text-align:center}
+  .status.live{color:var(--live)}
+  .ptt-wrap{position:relative;width:min(74vw,340px);aspect-ratio:1}
+  .ptt{position:absolute;inset:0;border-radius:50%;border:0;cursor:pointer;
+    background:radial-gradient(circle at 50% 35%,#ff8a45 0%,var(--accent) 45%,var(--accent-d) 100%);
+    box-shadow:0 0 0 10px #1c1e18,0 0 0 12px var(--line),0 18px 40px rgba(0,0,0,.6),inset 0 -10px 24px rgba(0,0,0,.25);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    color:#1a0c03;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
+    transition:transform .08s ease, background .2s}
+  .ptt:active,.ptt.live{transform:scale(.965)}
+  .ptt.live{background:radial-gradient(circle at 50% 35%,#ff6b62 0%,var(--live) 50%,#b3221b 100%)}
+  .ptt.busy{filter:saturate(.4) brightness(.8)}
+  .ptt svg{width:30%;height:30%}
+  .ptt b{font-family:"Archivo Black",sans-serif;font-size:clamp(15px,4.4vw,19px);letter-spacing:.14em;text-transform:uppercase}
+  .ring{position:absolute;inset:-14px;border-radius:50%;border:3px solid var(--live);opacity:0;pointer-events:none}
+  .ptt.live + .ring{animation:pulse 1.3s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(.94);opacity:.9}100%{transform:scale(1.12);opacity:0}}
+  .live-text{width:100%;max-width:560px;min-height:72px;max-height:22vh;overflow:auto;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
+    font-size:17px;line-height:1.45;white-space:pre-wrap}
+  .live-text:empty::before{content:attr(data-ph);color:var(--muted)}
+  .live-text i{color:var(--muted);font-style:normal}
+  .hint{font-size:13px;color:var(--muted);text-align:center;max-width:420px;line-height:1.45}
+
+  /* Kirjoitustila (kun mikrofonia ei ole) */
+  .typed{display:none;width:100%;max-width:560px;flex-direction:column;gap:10px}
+  .typed.on{display:flex}
+  .typed textarea{width:100%;min-height:150px;resize:vertical;background:var(--panel);color:var(--text);
+    border:1px solid var(--line);border-radius:14px;padding:14px 16px;font:inherit;font-size:17px;line-height:1.45}
+  .typed textarea:focus{outline:2px solid var(--accent);border-color:transparent}
+
+  /* ---------- Muistiinpanot ---------- */
+  #list{padding:4px 16px 16px;overflow:auto}
+  .search{position:sticky;top:0;background:var(--bg);padding:6px 0 12px;z-index:1}
+  .search input{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);
+    border-radius:12px;padding:12px 14px;font:inherit;font-size:16px}
+  .search input:focus{outline:2px solid var(--accent);border-color:transparent}
+  .empty{color:var(--muted);text-align:center;padding:60px 20px;line-height:1.5}
+  .note{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px 10px;margin-bottom:12px}
+  .seg{display:flex;gap:6px;margin-bottom:10px}
+  .seg button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--muted);font:inherit;font-weight:700;
+    font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:10px 0;border-radius:10px;cursor:pointer}
+  .seg button.on{color:var(--text);border-color:var(--accent)}
+  .note{display:grid;grid-template-columns:auto 1fr;column-gap:12px}
+  .note > *:not(.chk){grid-column:2}
+  .chk{grid-row:1 / span 4;width:30px;height:30px;margin-top:2px;border-radius:9px;border:2px solid var(--muted);
+    background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;color:#1a0c03}
+  .chk svg{width:18px;height:18px;opacity:0}
+  .chk.on{background:var(--ok);border-color:var(--ok)}
+  .chk.on svg{opacity:1}
+  .note.done .body{color:var(--muted);text-decoration:line-through;text-decoration-color:#555}
+  .toast button{background:none;border:0;color:var(--accent-d);font:inherit;font-weight:800;margin-left:10px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em}
+  .note .meta{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+  .note .body{font-size:16.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+  .note textarea{width:100%;min-height:120px;background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    border-radius:10px;padding:10px 12px;font:inherit;font-size:16px;line-height:1.45}
+  .acts{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+  .btn{background:transparent;border:0;color:var(--text);font:inherit;font-weight:600;font-size:14px;
+    padding:9px 12px;border-radius:10px;cursor:pointer}
+  .btn:hover{background:var(--panel2)}
+  .btn.primary{background:var(--accent);color:#1a0c03}
+  .btn.danger{color:#ff7b72}
+  .btn.danger.armed{background:#5a1612;color:#fff}
+  .share-row{display:none;gap:6px;flex-wrap:wrap;padding:8px 0 4px}
+  .share-row.on{display:flex}
+  .share-row a{color:var(--text);text-decoration:none;background:var(--panel2);border:1px solid var(--line);
+    padding:8px 12px;border-radius:10px;font-weight:600;font-size:14px}
+  .share-row small{flex-basis:100%;color:var(--muted);font-size:12px}
+
+  /* ---------- Alapalkki ---------- */
+  nav{display:flex;border-top:1px solid var(--line);background:#11120f;
+    padding-bottom:env(safe-area-inset-bottom)}
+  nav button{flex:1;background:none;border:0;color:var(--muted);font:inherit;font-weight:700;
+    font-size:13px;letter-spacing:.1em;text-transform:uppercase;padding:14px 0 12px;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:4px}
+  nav button.on{color:var(--accent)}
+  nav svg{width:22px;height:22px}
+  .count{display:inline-block;min-width:18px;padding:1px 6px;border-radius:9px;background:var(--panel2);
+    color:var(--text);font-size:11px;margin-left:4px}
+  footer{font-size:11px;color:var(--muted);text-align:center;padding:10px 0 2px;letter-spacing:.04em}
+  footer a{color:var(--muted)}
+  .toast{position:fixed;display:flex;align-items:center;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;
+    opacity:0;pointer-events:none;transition:.2s;max-width:90vw;text-align:center}
+  .toast.on{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Ven<span>aa</span>s</div>
+  <div class="engine" id="engine">Valmistellaan…</div>
+</header>
+
+<main>
+  <!-- SANELU -->
+  <section class="view on" id="rec">
+    <div class="status" id="status">Pidä pohjassa ja puhu</div>
+
+    <div class="ptt-wrap" id="pttWrap">
+      <button class="ptt" id="ptt" aria-label="Pidä pohjassa ja puhu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3.5"/>
+        </svg>
+        <b id="pttLabel">Paina</b>
+      </button>
+      <div class="ring"></div>
+    </div>
+
+    <div class="live-text" id="liveText" data-ph="Puhe näkyy tässä…"></div>
+
+    <div class="typed" id="typed">
+      <textarea id="typedInput" placeholder="Kirjoita tai sanele näppäimistön mikrofonilla…"></textarea>
+      <button class="btn primary" id="typedSave">Tallenna muistiinpano</button>
+    </div>
+
+    <div class="hint" id="hint">Lyhyt napautus = sanelu jatkuu, kunnes napautat uudelleen. Tietokoneella myös välilyönti toimii painonappina.</div>
+  </section>
+
+  <!-- MUISTIINPANOT -->
+  <section class="view" id="list">
+    <div class="search">
+      <div class="seg"><button class="on" data-tab="open">Avoimet <span id="cOpen">0</span></button><button data-tab="done">Arkisto <span id="cDone">0</span></button></div>
+      <input id="q" type="search" placeholder="Hae muistiinpanoista">
+    </div>
+    <div id="notes"></div>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-view="rec">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3.5"/></svg>
+    Sanele
+  </button>
+  <button data-view="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+    <span>Muistiinpanot<span class="count" id="count">0</span></span>
+  </button>
+</nav>
+<footer>Venaas · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const el = {
+    ptt:$('#ptt'), label:$('#pttLabel'), status:$('#status'), live:$('#liveText'),
+    engine:$('#engine'), hint:$('#hint'), typed:$('#typed'), typedInput:$('#typedInput'),
+    pttWrap:$('#pttWrap'), notes:$('#notes'), count:$('#count'), q:$('#q'), toast:$('#toast'),
+    cOpen:$('#cOpen'), cDone:$('#cDone')
+  };
+  const LANG = 'fi-FI';
+
+  /* ================= Apuja ================= */
+  let toastT;
+  function toast(msg, action){
+    el.toast.innerHTML=''; el.toast.append(msg);
+    if(action){ const b=document.createElement('button'); b.textContent=action.label;
+      b.addEventListener('click', ()=>{ el.toast.classList.remove('on'); action.fn(); }); el.toast.append(b); }
+    el.toast.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(()=>el.toast.classList.remove('on'), action ? 4000 : 2200);
+  }
+  const wd = ['su','ma','ti','ke','to','pe','la'];
+  function fmt(ts){ const d=new Date(ts), p=n=>String(n).padStart(2,'0');
+    return `${wd[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.${d.getFullYear()} klo ${p(d.getHours())}.${p(d.getMinutes())}`; }
+  function cleanText(t){ t = t.replace(/\s+/g,' ').trim(); return t ? t.charAt(0).toUpperCase()+t.slice(1) : t; }
+  const newId = () => 'n'+Date.now()+Math.random().toString(36).slice(2,6);
+
+  /* ================= Tallennus: vain tämä laite ================= */
+  const LS = 'venaas.notes.v1';
+  let memOnly = false;
+  function load(){ try{ return JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ memOnly = true; return []; } }
+  let notes = load();
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify(notes)); }catch(e){ if(!memOnly){ memOnly=true; toast('Tallennus laitteeseen ei onnistu tässä näkymässä'); } } }
+  function addNote(text){ notes.unshift({id:newId(), text, ts:Date.now(), done:false}); save(); render(); }
+  function setDone(id, done){ const n=notes.find(x=>x.id===id); if(!n) return; n.done=done; n.doneAt=done?Date.now():null; save(); render(); }
+  function updateNote(id, text){ const n=notes.find(x=>x.id===id); if(n){ n.text=text; save(); render(); } }
+  function removeNote(id){ notes = notes.filter(x=>x.id!==id); save(); render(); }
+  // Pyydetään selainta säilyttämään tiedot (vähentää riskiä, että iOS siivoaa ne)
+  try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+
+  /* ================= Puheentunnistus ================= */
+  let engine = null;
+  let buffer = '', partial = '';
+
+  function showLive(){
+    const b = buffer.trim(), p = partial.trim();
+    el.live.innerHTML = '';
+    if(b) el.live.append(b + (p ? ' ' : ''));
+    if(p){ const i=document.createElement('i'); i.textContent=p; el.live.append(i); }
+    el.live.scrollTop = el.live.scrollHeight;
+  }
+
+  // A) Clauden sanelu (tietokone: Chrome / Clauden työpöytäsovellus, kun sivu on Claudessa)
+  function makeClaudeEngine(d){
+    let lang = 'fi', heard = false;
+    d.onPartial(({text}) => { partial = text || ''; showLive(); });
+    d.onFinal(({text}) => { buffer += text; partial=''; showLive(); });
+    d.onState(({state, reason}) => {
+      if(state==='listening'){ heard = true; setUi('live'); }
+      if(state==='idle'){
+        const wasHeard = heard; heard = false;
+        if(!listening || !wasHeard || reason==='stopped') return;
+        finish(true);
+        if(!['viewer_stopped','hidden','time_limit'].includes(reason)) toast('Sanelu katkesi – tähän asti puhuttu tallennettiin.');
+      }
+    });
+    return {
+      start(){ return d.start(lang ? {language:lang} : undefined).catch(err => {
+        if(err && err.code==='unavailable' && lang){ lang=null; failed('retry'); return; }
+        if(err && err.code!=='stopped') failed(err.code); }); },
+      stop(){ return d.stop().catch(()=>{}); }
+    };
+  }
+
+  // B) Selaimen oma tunnistus (iPhonen Safari, Chrome) – kieli lukittu suomeksi
+  function makeWebEngine(SR){
+    let rec = null, want = false, endResolve = null, sessFinal = '', sessInterim = '';
+    function commitSession(){
+      const t = (sessFinal + ' ' + sessInterim).trim();
+      if(t) buffer += ' ' + t;
+      sessFinal = ''; sessInterim = ''; partial = '';
+    }
+    function create(){
+      rec = new SR();
+      rec.lang = LANG; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+      rec.onstart = () => setUi('live');
+      rec.onresult = e => {
+        // Rakennetaan koko istunnon teksti joka kerta alusta – estää iOS:n tuplatulokset
+        let f = '', i = '';
+        for(let k=0;k<e.results.length;k++){
+          const r = e.results[k];
+          if(r.isFinal) f += ' ' + r[0].transcript; else i += ' ' + r[0].transcript;
+        }
+        sessFinal = f.trim(); sessInterim = i.trim();
+        partial = (sessFinal + ' ' + sessInterim).trim();
+        showLive();
+      };
+      rec.onerror = e => {
+        if(e.error==='not-allowed' || e.error==='service-not-allowed'){ want=false; failed('not_granted'); }
+      };
+      rec.onend = () => {
+        commitSession(); showLive();
+        if(want){ try{ create(); rec.start(); return; }catch(err){} }   // iOS katkaisee tauolla – jatketaan
+        const r = endResolve; endResolve = null; r && r();
+      };
+    }
+    return {
+      start(){ want = true; buffer=''; create(); try{ rec.start(); }catch(e){ failed('upstream_error'); } },
+      stop(){ want = false; return new Promise(res => {
+        endResolve = res; try{ rec.stop(); }catch(e){ endResolve=null; commitSession(); res(); }
+        setTimeout(()=>{ if(endResolve){ endResolve=null; commitSession(); res(); } }, 2500);
+      }); }
+    };
+  }
+
+  // C) Varatila: tekstikenttä + näppäimistön sanelu
+  function useTypedMode(reason){
+    engine = null;
+    el.pttWrap.style.display='none'; el.live.style.display='none';
+    el.typed.classList.add('on');
+    el.status.textContent = 'Kirjoita tai sanele';
+    el.engine.textContent = 'Näppäimistön sanelu';
+    el.hint.innerHTML = reason || 'Painonappisanelu ei toimi tässä näkymässä. Avaa Venaas omasta osoitteestaan Safarissa – tai napauta kenttää ja käytä näppäimistön mikrofonia.';
+  }
+
+  async function initEngine(){
+    const inSandbox = (() => { try{ return window.self !== window.top; }catch(e){ return true; } })();
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(SR && !inSandbox){ engine = makeWebEngine(SR); el.engine.textContent = 'Suomi · laitteen tunnistus'; return; }
+    let d = null;
+    try{ if(window.claude && claude.use) d = await claude.use('dictation'); }catch(e){}
+    if(d){ engine = makeClaudeEngine(d); el.engine.textContent = 'Suomi · Clauden sanelu'; return; }
+    useTypedMode();
+  }
+
+  /* ================= Painonappi ================= */
+  let listening = false, mode = null, pressAt = 0, finishing = false;
+
+  function setUi(s){
+    el.ptt.classList.toggle('live', s==='live' || s==='starting');
+    el.ptt.classList.toggle('busy', s==='busy');
+    el.status.classList.toggle('live', s==='live' || s==='starting');
+    if(s==='live'){ el.status.textContent = mode==='toggle' ? '● Kuuntelee – napauta lopettaaksesi' : '● Kuuntelee'; el.label.textContent = mode==='toggle' ? 'Lopeta' : 'Puhu'; }
+    else if(s==='starting'){ el.status.textContent = 'Avataan mikrofonia…'; el.label.textContent='Puhu'; }
+    else if(s==='busy'){ el.status.textContent = 'Litteroidaan…'; el.label.textContent='Odota'; }
+    else { el.status.textContent = 'Pidä pohjassa ja puhu'; el.label.textContent='Paina'; }
+  }
+
+  function begin(){
+    if(!engine || finishing) return;
+    buffer=''; partial=''; showLive();
+    listening = true; pressAt = Date.now(); mode = 'hold';
+    setUi('starting');
+    engine.start();             // kutsuttava suoraan kosketuksesta
+  }
+
+  async function finish(fromPlatform){
+    if(!listening || finishing) return;
+    finishing = true; listening = false; setUi('busy');
+    if(!fromPlatform) await engine.stop();
+    if(partial){ buffer += ' ' + partial; partial=''; }
+    const text = cleanText(buffer);
+    buffer=''; showLive();
+    if(text){ addNote(text); toast('Muistiinpano tallennettu'); }
+    else toast('Puhetta ei tunnistettu');
+    finishing = false; mode = null; setUi('idle');
+  }
+
+  function failed(code){
+    listening = false; finishing = false; mode = null; setUi('idle');
+    if(code==='unavailable'){ useTypedMode('Sanelu ei ole käytettävissä. Käytä näppäimistön mikrofonia.'); return; }
+    toast({
+      not_granted:'Mikrofoni tai puheentunnistus estetty. Salli ne: Asetukset → Safari → Mikrofoni, ja Asetukset → Yleiset → Näppäimistö → Sanelu päälle.',
+      dismissed:'Mikrofonin lupa jäi vastaamatta – yritä uudelleen.',
+      rate_limited:'Liian monta sanelua kerralla – yritä hetken päästä.',
+      retry:'Suomi ei ollut saatavilla – paina uudelleen.'
+    }[code] || 'Sanelu katkesi – yritä uudelleen.');
+  }
+
+  el.ptt.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if(listening && mode==='toggle'){ finish(); return; }
+    if(!listening) begin();
+  });
+  const release = () => {
+    if(!listening || mode!=='hold') return;
+    if(Date.now() - pressAt < 400){ mode='toggle'; setUi('live'); }
+    else finish();
+  };
+  el.ptt.addEventListener('pointerup', release);
+  el.ptt.addEventListener('pointercancel', release);
+  el.ptt.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('visibilitychange', () => { if(document.hidden && listening) finish(); });
+
+  let spaceDown = false;
+  document.addEventListener('keydown', e => {
+    if(e.code!=='Space' || e.repeat || !engine || !$('#rec').classList.contains('on')) return;
+    if(['TEXTAREA','INPUT'].includes(document.activeElement.tagName)) return;
+    e.preventDefault(); spaceDown = true;
+    if(listening && mode==='toggle'){ finish(); return; }
+    if(!listening) begin();
+  });
+  document.addEventListener('keyup', e => {
+    if(e.code!=='Space' || !spaceDown) return; spaceDown=false; e.preventDefault(); release();
+  });
+
+  $('#typedSave').addEventListener('click', () => {
+    const text = cleanText(el.typedInput.value);
+    if(!text){ toast('Kirjoita tai sanele ensin jotain'); return; }
+    addNote(text); el.typedInput.value=''; el.typedInput.blur();
+    toast('Muistiinpano tallennettu');
+  });
+
+  /* ================= Näkymät ================= */
+  document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x===b));
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on', v.id===b.dataset.view));
+    if(listening) finish();
+  }));
+  let tab = 'open';
+  document.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    tab = b.dataset.tab; editing = null;
+    document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on', x===b));
+    render();
+  }));
+  el.q.addEventListener('input', render);
+
+  /* ================= Lista ================= */
+  let editing = null;
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+  function render(){
+    const open = notes.filter(n=>!n.done), done = notes.filter(n=>n.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+    el.count.textContent = open.length; el.cOpen.textContent = open.length; el.cDone.textContent = done.length;
+    const q = el.q.value.trim().toLowerCase();
+    let list = tab==='open' ? open : done;
+    if(q) list = list.filter(n => n.text.toLowerCase().includes(q));
+    el.notes.innerHTML = '';
+    if(!list.length){
+      const e = document.createElement('div'); e.className='empty';
+      e.textContent = q ? 'Ei osumia.' : tab==='open' ? 'Ei avoimia muistiinpanoja. Paina isoa nappia ja puhu.' : 'Arkisto on tyhjä. Rastita muistiinpano, kun asia on hoidettu.';
+      el.notes.append(e); return;
+    }
+    for(const n of list){
+      const card = document.createElement('article'); card.className='note'+(n.done?' done':'');
+      const chk = document.createElement('button'); chk.className='chk'+(n.done?' on':'');
+      chk.setAttribute('aria-label', n.done ? 'Palauta avoimeksi' : 'Merkitse tehdyksi');
+      chk.innerHTML = CHECK;
+      chk.addEventListener('click', () => {
+        if(!n.done){
+          chk.classList.add('on');
+          setTimeout(()=>{ setDone(n.id, true); toast('Tehty – siirretty arkistoon', {label:'Kumoa', fn:()=>setDone(n.id,false)}); }, 220);
+        } else { setDone(n.id, false); toast('Palautettu avoimiin'); }
+      });
+      const meta = document.createElement('div'); meta.className='meta';
+      meta.textContent = fmt(n.ts) + (n.done && n.doneAt ? ' · tehty ' + fmt(n.doneAt).replace(/^\S+ /,'') : '');
+      card.append(chk, meta);
+
+      if(editing===n.id){
+        const ta = document.createElement('textarea'); ta.value = n.text; card.append(ta);
+        const acts = document.createElement('div'); acts.className='acts';
+        acts.append(btn('Tallenna', ()=>{ const t=ta.value.trim(); editing=null; if(t && t!==n.text) updateNote(n.id,t); else render(); }, 'primary'),
+                    btn('Peru', ()=>{ editing=null; render(); }));
+        card.append(acts); el.notes.append(card); setTimeout(()=>ta.focus(),0); continue;
+      }
+      const body = document.createElement('div'); body.className='body'; body.textContent = n.text;
+      const share = document.createElement('div'); share.className='share-row';
+      const acts = document.createElement('div'); acts.className='acts';
+      const del = btn('Poista', ()=>{
+        if(del.classList.contains('armed')){ removeNote(n.id); toast('Poistettu'); return; }
+        del.classList.add('armed'); del.textContent='Vahvista poisto';
+        setTimeout(()=>{ del.classList.remove('armed'); del.textContent='Poista'; }, 3000);
+      }, 'danger');
+      acts.append(btn('Jaa', ()=>doShare(n, share)), btn('Kopioi', ()=>copy(n.text)));
+      if(!n.done) acts.append(btn('Muokkaa', ()=>{ editing=n.id; render(); }));
+      acts.append(del);
+      card.append(body, share, acts);
+      el.notes.append(card);
+    }
+  }
+  function btn(txt, fn, cls){ const b=document.createElement('button'); b.className='btn'+(cls?' '+cls:''); b.textContent=txt; b.addEventListener('click', fn); return b; }
+
+  async function copy(text){
+    try{ await navigator.clipboard.writeText(text); toast('Kopioitu leikepöydälle'); }
+    catch(e){
+      const ta=document.createElement('textarea'); ta.value=text; document.body.append(ta); ta.select();
+      let ok=false; try{ ok=document.execCommand('copy'); }catch(_){}
+      ta.remove(); toast(ok?'Kopioitu leikepöydälle':'Kopiointi ei onnistunut – valitse teksti käsin');
+    }
+  }
+
+  async function doShare(n, row){
+    const top = (() => { try{ return window.self===window.top; }catch(e){ return false; } })();
+    if(navigator.share && top){
+      try{ await navigator.share({text:n.text}); return; }catch(e){ if(e.name==='AbortError') return; }
+    }
+    if(row.classList.contains('on')){ row.classList.remove('on'); return; }
+    const t = encodeURIComponent(n.text);
+    row.innerHTML='';
+    for(const [name,href] of [
+      ['WhatsApp','https://wa.me/?text='+t],
+      ['Telegram','https://t.me/share/url?url=%20&text='+t],
+      ['Sähköposti','mailto:?subject='+encodeURIComponent('Muistiinpano '+fmt(n.ts))+'&body='+t],
+      ['Tekstiviesti','sms:?&body='+t]
+    ]){ const a=document.createElement('a'); a.href=href; a.target='_blank'; a.rel='noopener'; a.textContent=name; row.append(a); }
+    row.append(btn('Kopioi teksti', ()=>copy(n.text)));
+    const s=document.createElement('small'); s.textContent='Jos linkki ei aukea, kopioi teksti ja liitä se haluamaasi sovellukseen.'; row.append(s);
+    row.classList.add('on');
+  }
+
+  render();
+  initEngine();
+})();
+</script>
+</body>
+</html>
