@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#0d0e0c">
 <meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-title" content="Venaas">
-<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<link rel="apple-touch-icon" href="icon-180.png?v=3">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="alternate icon" type="image/png" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -250,7 +250,9 @@
 
   .engine{max-width:120px;line-height:1.4;font-size:10px}
   .brand{display:flex;align-items:center;gap:10px}
-  .mark{width:40px;height:40px;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+  .mark{width:44px;height:44px;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 3px 6px rgba(0,0,0,.6))}
+  @font-face{font-family:'Fredoka';font-weight:700;font-display:swap;src:url('fredoka-700.woff2') format('woff2')}
+  .logo{font-family:'Fredoka','Archivo Black',sans-serif;font-weight:700;text-transform:none;letter-spacing:.01em;font-size:30px;line-height:1}
   /* Logo hieman kohokuvioksi */
   .logo{text-shadow:0 2px 0 #000,0 3px 6px rgba(0,0,0,.6)}
 </style>
@@ -259,15 +261,18 @@
 <header>
   <div class="brand"><svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
   <defs><linearGradient id="vg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa262"/><stop offset="1" stop-color="#e2550c"/></linearGradient></defs>
-  <circle cx="43" cy="41" r="16" fill="url(#vg)"/>
-  <path d="M12 99 C12 77 26 63 43 63 C60 63 74 77 74 99 Z" fill="url(#vg)"/>
-  <path d="M60 82 L80 52 Q85 43 78 37 L64 30" fill="none" stroke="url(#vg)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <ellipse cx="60.5" cy="27.5" rx="8" ry="6.8" transform="rotate(-25 60.5 27.5)" fill="url(#vg)"/>
-  <g fill="none" stroke="#ffa262" stroke-width="2.8" stroke-linecap="round">
-    <path d="M66 12 q2 -4.5 7 -4.5"/><path d="M71 17 q4 -3 8 -1.5"/><path d="M74 24 q4 -1 7 1.5"/>
+  <g fill="url(#vg)" stroke="url(#vg)" stroke-linejoin="round">
+    <path d="M30 100 C30 82 38 70 50 68 L58 68 C70 70 78 82 78 100 Z" stroke-width="0"/>
+    <rect x="47" y="50" width="12" height="20" rx="3" stroke-width="0"/>
+    <circle cx="54" cy="40" r="16" stroke-width="0"/>
+    <path d="M67 33 Q72 39 75 43.5 Q76 46 72.5 46.5 L67 47 Z" stroke-width="1.5"/>
   </g>
-  <path d="M16 15.5 q0 -7 7.5 -7 q7.5 0 7.5 6.5 q0 4.5 -5 6.5 q-2.5 1 -2.5 4.5" fill="none" stroke="#ffa262" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="23.5" cy="32" r="2.6" fill="#ffa262"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 76 L28 50 Q24 44 30 38 L42 28" stroke="#0d0e0c" stroke-width="16"/>
+    <path d="M50 76 L28 50 Q24 44 30 38 L42 28" stroke="url(#vg)" stroke-width="10"/>
+  </g>
+  <circle cx="44" cy="26" r="9.5" fill="#0d0e0c"/>
+  <circle cx="44" cy="26" r="6.8" fill="url(#vg)"/>
 </svg><div class="logo">Ven<span>aa</span>s</div></div>
   <div class="engine" id="engine">Valmistellaan…</div>
 </header>
@@ -321,16 +326,19 @@
     </div>
     <div class="set-about"><svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
   <defs><linearGradient id="vg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffa262"/><stop offset="1" stop-color="#e2550c"/></linearGradient></defs>
-  <circle cx="43" cy="41" r="16" fill="url(#vg2)"/>
-  <path d="M12 99 C12 77 26 63 43 63 C60 63 74 77 74 99 Z" fill="url(#vg2)"/>
-  <path d="M60 82 L80 52 Q85 43 78 37 L64 30" fill="none" stroke="url(#vg2)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <ellipse cx="60.5" cy="27.5" rx="8" ry="6.8" transform="rotate(-25 60.5 27.5)" fill="url(#vg2)"/>
-  <g fill="none" stroke="#ffa262" stroke-width="2.8" stroke-linecap="round">
-    <path d="M66 12 q2 -4.5 7 -4.5"/><path d="M71 17 q4 -3 8 -1.5"/><path d="M74 24 q4 -1 7 1.5"/>
+  <g fill="url(#vg2)" stroke="url(#vg2)" stroke-linejoin="round">
+    <path d="M30 100 C30 82 38 70 50 68 L58 68 C70 70 78 82 78 100 Z" stroke-width="0"/>
+    <rect x="47" y="50" width="12" height="20" rx="3" stroke-width="0"/>
+    <circle cx="54" cy="40" r="16" stroke-width="0"/>
+    <path d="M67 33 Q72 39 75 43.5 Q76 46 72.5 46.5 L67 47 Z" stroke-width="1.5"/>
   </g>
-  <path d="M16 15.5 q0 -7 7.5 -7 q7.5 0 7.5 6.5 q0 4.5 -5 6.5 q-2.5 1 -2.5 4.5" fill="none" stroke="#ffa262" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="23.5" cy="32" r="2.6" fill="#ffa262"/>
-</svg><br>Venaas v1.3<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 76 L28 50 Q24 44 30 38 L42 28" stroke="#1a1d17" stroke-width="16"/>
+    <path d="M50 76 L28 50 Q24 44 30 38 L42 28" stroke="url(#vg2)" stroke-width="10"/>
+  </g>
+  <circle cx="44" cy="26" r="9.5" fill="#1a1d17"/>
+  <circle cx="44" cy="26" r="6.8" fill="url(#vg2)"/>
+</svg><br>Venaas v1.4<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
   </section>
 </main>
 
@@ -348,7 +356,7 @@
     Asetukset
   </button>
 </nav>
-<footer>Venaas v1.3 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v1.4 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
