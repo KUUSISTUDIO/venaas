@@ -57,6 +57,8 @@
     background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;
     font-size:17px;line-height:1.45;white-space:pre-wrap}
   .live-text:empty::before{content:attr(data-ph);color:var(--muted)}
+  .live-text{transition:opacity .4s}
+  .live-text.fade{opacity:0}
   .live-text i{color:var(--muted);font-style:normal}
   .diag{font-size:11px;color:#5d6056;text-align:center;max-width:420px;line-height:1.4;min-height:14px}
   .hint{font-size:13px;color:var(--muted);text-align:center;max-width:420px;line-height:1.45}
@@ -176,7 +178,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas v0.8 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v0.9 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -449,11 +451,22 @@
 
   function begin(){
     if(!engine || finishing) return;
+    clearTimeout(clearT); el.live.classList.remove('fade');
     buffer=''; partial=''; showLive(); diagLog.length = 0;
     listening = true; pressAt = Date.now(); mode = 'hold';
     setUi('starting');
     engine.start();             // kutsuttava suoraan kosketuksesta
   }
+
+  // Etusivun tekstikenttä tyhjenee 8 s kuluttua tai napauttamalla
+  let clearT = null;
+  function clearLive(){
+    clearTimeout(clearT);
+    if(listening || finishing || !el.live.textContent) return;
+    el.live.classList.add('fade');
+    setTimeout(()=>{ if(!listening && !finishing){ el.live.innerHTML=''; } el.live.classList.remove('fade'); }, 400);
+  }
+  el.live.addEventListener('click', clearLive);
 
   async function finish(fromPlatform){
     if(!listening || finishing) return;
@@ -470,6 +483,8 @@
       el.live.innerHTML = '';
       const ok = document.createElement('i'); ok.textContent = '✓ Tallennettu muistiinpanoksi\n';
       el.live.append(ok, text);
+      clearTimeout(clearT); el.live.classList.remove('fade');
+      clearT = setTimeout(clearLive, 8000);
     }
     // iPhonen Safari tunnistaa puhetta vain kerran sivun latausta kohden → ladataan sivu uudelleen
     if(IS_IOS && engine && engine.kind==='web'){
