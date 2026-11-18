@@ -176,7 +176,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas v0.3 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v0.4 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -292,7 +292,7 @@
     return {
       start(){
         want = true; restarts = 0; lastErr = ''; sessFinal = ''; sessInterim = '';
-        if(running){ diag('oli jo käynnissä'); setUi('live'); return; }
+        if(running){ diag('oli jumissa → nollaus'); try{ rec.abort(); }catch(e){} running=false; }
         try{ rec.start(); diag('aloitus'); }
         catch(e){ diag('aloitusvirhe: ' + e.name); if(e.name!=='InvalidStateError') failed('upstream_error'); }
       },
@@ -303,7 +303,7 @@
           endResolve = res;
           try{ rec.stop(); diag('lopetus'); }catch(e){ endResolve=null; commitSession(); res(); return; }
           // iOS palauttaa lopullisen tekstin vasta lopetuksen jälkeen – odotetaan enintään 5 s
-          setTimeout(()=>{ if(endResolve){ diag('aikakatkaisu'); try{ rec.abort(); }catch(e){} endResolve=null; commitSession(); res(); } }, 5000);
+          setTimeout(()=>{ if(endResolve){ diag('aikakatkaisu'); try{ rec.abort(); }catch(e){} running=false; endResolve=null; commitSession(); res(); } }, 5000);
         });
       }
     };
