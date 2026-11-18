@@ -176,7 +176,7 @@
     <span>Muistiinpanot<span class="count" id="count">0</span></span>
   </button>
 </nav>
-<footer>Venaas v0.6 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v0.7 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -330,6 +330,87 @@
     };
   }
 
+  // R) Nauhoitus + tekoälylitterointi (ensisijainen). Ääni lähetetään litteroitavaksi ja unohdetaan heti.
+  const TRANSCRIBE_URL = 'https://dhjzqqjxltdwxootngiy.supabase.co/functions/v1/venaas-transcribe';
+  const APP_KEY = 'venaas-hg-7Kq2xP9m';
+  const MAX_REC_MS = 3 * 60 * 1000;
+  function pickMime(){
+    for(const m of ['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus']){
+      try{ if(MediaRecorder.isTypeSupported(m)) return m; }catch(e){}
+    }
+    return '';
+  }
+  function makeRecorderEngine(){
+    let stream = null, mr = null, chunks = [], startedAt = 0, tick = null, cap = null;
+    let pendingStop = null, starting = null;
+    function cleanup(){
+      clearInterval(tick); clearTimeout(cap); tick = null;
+      if(stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+      mr = null;
+    }
+    function showTimer(){
+      const s = Math.floor((Date.now()-startedAt)/1000);
+      partial = '● Nauhoittaa ' + Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+      showLive();
+    }
+    async function upload(blob){
+      if(blob.size < 1500){ diag('liian lyhyt'); return ''; }
+      diag('lähetys ' + Math.round(blob.size/1024) + ' kt');
+      const ctrl = new AbortController(); const to = setTimeout(()=>ctrl.abort(), 60000);
+      try{
+        const r = await fetch(TRANSCRIBE_URL, { method:'POST', body: blob, signal: ctrl.signal,
+          headers: { 'Content-Type': blob.type || 'audio/mp4', 'x-venaas-key': APP_KEY } });
+        const data = await r.json().catch(()=>({}));
+        if(!r.ok){ lastErr = data.error || ('http ' + r.status); diag('virhe: ' + lastErr); return ''; }
+        diag('valmis'); return data.text || '';
+      }catch(e){ lastErr = e.name==='AbortError' ? 'aikakatkaisu' : 'ei yhteyttä'; diag('virhe: ' + lastErr); return ''; }
+      finally{ clearTimeout(to); }
+    }
+    return {
+      kind: 'rec',
+      start(){
+        chunks = []; lastErr = ''; pendingStop = null;
+        diag('mikki');
+        starting = navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true } })
+          .then(st => {
+            stream = st;
+            const mime = pickMime();
+            mr = mime ? new MediaRecorder(st, { mimeType: mime }) : new MediaRecorder(st);
+            mr.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+            mr.start(250);
+            startedAt = Date.now(); diag('nauhoittaa'); setUi('live');
+            tick = setInterval(showTimer, 500); showTimer();
+            cap = setTimeout(()=>{ diag('3 min raja'); if(listening) finish(); }, MAX_REC_MS);
+            if(pendingStop){ const p = pendingStop; pendingStop = null; p(); }
+          })
+          .catch(e => {
+            diag('mikkivirhe: ' + e.name);
+            cleanup();
+            failed(e.name==='NotAllowedError' ? 'not_granted' : 'upstream_error');
+          });
+      },
+      stop(){
+        return new Promise(async res => {
+          // Jos nappi päästettiin ennen kuin nauhoitus ehti alkaa, odotetaan sen alkua
+          if(!mr && starting){ await new Promise(r => { pendingStop = r; starting.finally(()=>setTimeout(r, 0)); }); }
+          if(!mr){ cleanup(); res(); return; }
+          const rec = mr;
+          rec.onstop = async () => {
+            const type = rec.mimeType || (chunks[0] && chunks[0].type) || 'audio/mp4';
+            const blob = new Blob(chunks, { type });
+            chunks = []; cleanup();
+            partial = ''; showLive();
+            el.status.textContent = 'Litteroidaan…';
+            const text = await upload(blob);   // blob vapautuu tämän jälkeen – ääntä ei tallenneta
+            if(text) buffer += ' ' + text;
+            res();
+          };
+          try{ rec.stop(); diag('lopetus'); }catch(e){ cleanup(); res(); }
+        });
+      }
+    };
+  }
+
   // C) Varatila: tekstikenttä + näppäimistön sanelu
   function useTypedMode(reason){
     engine = null;
@@ -342,11 +423,14 @@
 
   async function initEngine(){
     const inSandbox = (() => { try{ return window.self !== window.top; }catch(e){ return true; } })();
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(SR && !inSandbox){ engine = makeWebEngine(SR); el.engine.textContent = 'Suomi · laitteen tunnistus'; return; }
+    if(!inSandbox && window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      engine = makeRecorderEngine(); el.engine.textContent = 'Suomi · tekoälylitterointi'; return;
+    }
     let d = null;
     try{ if(window.claude && claude.use) d = await claude.use('dictation'); }catch(e){}
     if(d){ engine = makeClaudeEngine(d); el.engine.textContent = 'Suomi · Clauden sanelu'; return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(SR && !inSandbox){ engine = makeWebEngine(SR); el.engine.textContent = 'Suomi · laitteen tunnistus'; return; }
     useTypedMode();
   }
 
@@ -378,7 +462,8 @@
     if(partial){ buffer += ' ' + partial; partial=''; }
     const text = cleanText(buffer);
     buffer=''; showLive();
-    const msg = text ? 'Muistiinpano tallennettu' : (lastErr ? 'Puhetta ei tunnistettu (' + lastErr + ')' : 'Puhetta ei tunnistettu');
+    const errText = {missing_api_key:'litterointipalvelun avain puuttuu', rate_limited:'liian monta sanelua – odota hetki', forbidden:'pääsy estetty', openai_error:'litterointipalvelu ei vastannut', too_large:'liian pitkä äänite'}[lastErr] || lastErr;
+    const msg = text ? 'Muistiinpano tallennettu' : (lastErr ? 'Ei tekstiä (' + errText + ')' : 'Puhetta ei tunnistettu');
     if(text) addNote(text);
     // iPhonen Safari tunnistaa puhetta vain kerran sivun latausta kohden → ladataan sivu uudelleen
     if(IS_IOS && engine && engine.kind==='web'){
