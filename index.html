@@ -89,7 +89,7 @@
   .chk svg{width:18px;height:18px;opacity:0}
   .chk.on{background:var(--ok);border-color:var(--ok)}
   .chk.on svg{opacity:1}
-  .note.done .body{color:var(--muted);text-decoration:line-through;text-decoration-color:#555}
+  .note.checked .body,.note.checked .title{color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:#7a7d70}
   .toast button{background:none;border:0;color:var(--accent-d);font:inherit;font-weight:800;margin-left:10px;cursor:pointer;text-transform:uppercase;letter-spacing:.06em}
   .day{font-family:"Archivo Black",sans-serif;font-size:22px;letter-spacing:.01em;margin:18px 2px 10px;color:var(--text)}
   .day:first-child{margin-top:4px}
@@ -245,7 +245,9 @@
 
   .note > .acts,.note > .share-row{grid-column:1 / -1}
   .acts{gap:7px}
-  .acts .btn{padding:8px 11px;font-size:13.5px}
+  .acts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .acts .btn{padding:9px 0;font-size:12.5px;text-align:center;white-space:nowrap}
+  .acts .btn.primary{grid-column:span 2}
 
   .engine{max-width:120px;line-height:1.4;font-size:10px}
   .brand{display:flex;align-items:center;gap:10px}
@@ -308,7 +310,7 @@
       Esimerkki: <em>"Kaupasta – lihapullia, nakkeja, maitoa"</em> → otsikko <em>Kaupasta</em>, muistiinpanoon <em>lihapullia, nakkeja, maitoa</em>.<br><br>
       Vinkki: jos haluat otsikoksi useamman sanan, pidä otsikon jälkeen pieni tauko. Litterointi lisää silloin yleensä pisteen, ja koko lause muuttuu otsikoksi. Muuten otsikoksi tulee ensimmäinen sana.</p>
     </div>
-    <div class="set-about">Venaas v1.9<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
+    <div class="set-about">Venaas v2.0<br>Tekijä: <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a><br>Muistiinpanot tallentuvat vain tähän laitteeseen.</div>
   </section>
 </main>
 
@@ -326,7 +328,7 @@
     Asetukset
   </button>
 </nav>
-<footer>Venaas v1.9 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
+<footer>Venaas v2.0 · <a href="https://www.hideawaygroup.fi" target="_blank" rel="noopener">Hideaway Group Oy</a></footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -364,6 +366,7 @@
   let memOnly = false;
   function load(){ try{ return JSON.parse(localStorage.getItem(LS)||'[]'); }catch(e){ memOnly = true; return []; } }
   let notes = load();
+  notes.forEach(n => { if(n.done && n.checked===undefined){ n.checked = true; n.checkedAt = n.doneAt || null; } });
   function save(){ try{ localStorage.setItem(LS, JSON.stringify(notes)); }catch(e){ if(!memOnly){ memOnly=true; toast('Tallennus laitteeseen ei onnistu tässä näkymässä'); } } }
   /* Asetukset */
   const SK = 'venaas.settings.v1';
@@ -392,6 +395,7 @@
   }
   const fullText = n => (n.title ? n.title + (n.text ? '\n' + n.text : '') : n.text);
   function setDone(id, done){ const n=notes.find(x=>x.id===id); if(!n) return; n.done=done; n.doneAt=done?Date.now():null; save(); render(); }
+  function setChecked(id, on){ const n=notes.find(x=>x.id===id); if(!n) return; n.checked=on; n.checkedAt=on?Date.now():null; save(); render(); }
   function updateNote(id, text, title){ const n=notes.find(x=>x.id===id); if(n){ n.text=text; if(title) n.title=title; else delete n.title; save(); render(); } }
   function removeNote(id){ notes = notes.filter(x=>x.id!==id); save(); render(); }
   // Pyydetään selainta säilyttämään tiedot (vähentää riskiä, että iOS siivoaa ne)
@@ -746,7 +750,7 @@
     el.notes.innerHTML = '';
     if(!list.length){
       const e = document.createElement('div'); e.className='empty';
-      e.textContent = q ? 'Ei osumia.' : tab==='open' ? 'Ei avoimia muistiinpanoja. Paina isoa nappia ja puhu.' : 'Arkisto on tyhjä. Rastita muistiinpano, kun asia on hoidettu.';
+      e.textContent = q ? 'Ei osumia.' : tab==='open' ? 'Ei avoimia muistiinpanoja. Paina isoa nappia ja puhu.' : 'Arkisto on tyhjä. Arkistoi-painike siirtää muistiinpanon tänne.';
       el.notes.append(e); return;
     }
     let lastDay = null;
@@ -757,18 +761,16 @@
         const h = document.createElement('h2'); h.className='day'; h.textContent = dayTitle(n.ts);
         el.notes.append(h);
       }
-      const card = document.createElement('article'); card.className='note'+(n.done?' done':'');
-      const chk = document.createElement('button'); chk.className='chk'+(n.done?' on':'');
-      chk.setAttribute('aria-label', n.done ? 'Palauta avoimeksi' : 'Merkitse tehdyksi');
+      const card = document.createElement('article'); card.className='note'+(n.checked?' checked':'');
+      const chk = document.createElement('button'); chk.className='chk'+(n.checked?' on':'');
+      chk.setAttribute('aria-label', n.checked ? 'Poista tehty-merkintä' : 'Merkitse tehdyksi');
       chk.innerHTML = CHECK;
       chk.addEventListener('click', () => {
-        if(!n.done){
-          chk.classList.add('on');
-          setTimeout(()=>{ setDone(n.id, true); toast('Tehty – siirretty arkistoon', {label:'Kumoa', fn:()=>setDone(n.id,false)}); }, 220);
-        } else { setDone(n.id, false); toast('Palautettu avoimiin'); }
+        setChecked(n.id, !n.checked);
       });
       const meta = document.createElement('div'); meta.className='meta';
-      meta.textContent = timeOf(n.ts) + (n.done && n.doneAt ? ' · tehty ' + (dayKey(n.doneAt)===dayKey(n.ts) ? timeOf(n.doneAt) : dayTitle(n.doneAt)+' '+timeOf(n.doneAt)) : '');
+      const when = t => dayKey(t)===dayKey(n.ts) ? timeOf(t) : dayTitle(t)+' '+timeOf(t);
+      meta.textContent = timeOf(n.ts) + (n.checked && n.checkedAt ? ' · tehty ' + when(n.checkedAt) : '') + (n.done && n.doneAt ? ' · arkistoitu ' + when(n.doneAt) : '');
       card.append(chk, meta);
 
       if(editing===n.id){
@@ -789,7 +791,12 @@
         setTimeout(()=>{ del.classList.remove('armed'); del.textContent='Poista'; }, 3000);
       }, 'danger');
       acts.append(btn('Jaa', ()=>doShare(n, share)), btn('Kopioi', ()=>copy(fullText(n))));
-      if(!n.done) acts.append(btn('Muokkaa', ()=>{ editing=n.id; render(); }));
+      if(!n.done){
+        acts.append(btn('Muokkaa', ()=>{ editing=n.id; render(); }));
+        acts.append(btn('Arkistoi', ()=>{ setDone(n.id, true); toast('Siirretty arkistoon', {label:'Kumoa', fn:()=>setDone(n.id,false)}); }));
+      } else {
+        acts.append(btn('Palauta', ()=>{ setDone(n.id, false); toast('Palautettu avoimiin'); }));
+      }
       acts.append(del);
       card.append(body, share, acts);
       el.notes.append(card);
